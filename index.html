@@ -700,25 +700,40 @@
         // Charger au démarrage
         loadWishlist();
 
-        // Effet de neige
-        function createSnowflakes() {
-            const snowflakesContainer = document.querySelector('.snowflakes');
-            const snowflakeCount = 50;
+        // Effet de neige (ou de têtes qui tombent !)
+function createSnowflakes() {
+    const snowflakesContainer = document.querySelector('.snowflakes');
+    const snowflakeCount = 50;
 
-            for (let i = 0; i < snowflakeCount; i++) {
-                const snowflake = document.createElement('div');
-                snowflake.classList.add('snowflake');
-                snowflake.innerHTML = '❄';
-                snowflake.style.left = Math.random() * 100 + '%';
-                snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
-                snowflake.style.animationDelay = Math.random() * 5 + 's';
-                snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
-                snowflake.style.opacity = Math.random() * 0.5 + 0.3;
-                snowflakesContainer.appendChild(snowflake);
-            }
+    // Ton image !
+    const imageURL = 'https://github.com/Rezalowx/christmas-wishlist/blob/main/images/AB89832A-4034-41B2-BD26-CA2891E38123_4_5005_c.jpeg?raw=true';
+
+    for (let i = 0; i < snowflakeCount; i++) {
+        const snowflake = document.createElement('div');
+        snowflake.classList.add('snowflake');
+        
+        // Si une image est définie, on l'utilise, sinon on garde les flocons
+        if (imageURL) {
+            const img = document.createElement('img');
+            img.src = imageURL;
+            img.style.width = (Math.random() * 30 + 20) + 'px'; // Taille entre 20 et 50px
+            img.style.height = 'auto';
+            img.style.borderRadius = '50%'; // Forme ronde
+            snowflake.appendChild(img);
+        } else {
+            snowflake.innerHTML = '❄';
+            snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
         }
+        
+        snowflake.style.left = Math.random() * 100 + '%';
+        snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
+        snowflake.style.animationDelay = Math.random() * 5 + 's';
+        snowflake.style.opacity = Math.random() * 0.5 + 0.3;
+        snowflakesContainer.appendChild(snowflake);
+    }
+}
 
-        createSnowflakes();
+createSnowflakes();
     </script>
 </body>
 </html>
