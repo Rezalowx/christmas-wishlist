@@ -663,13 +663,11 @@
 
         // Réserver un item
         async function reserveItem(id) {
-            const name = prompt('Ton prénom pour réserver ce cadeau :');
-            if (!name) return;
 
             try {
                 const { error } = await supabase
                     .from('wishlist_items')
-                    .update({ reserved_by: name })
+                    .update({ reserved_by: "quelqu'un" })
                     .eq('id', id);
 
                 if (error) throw error;
