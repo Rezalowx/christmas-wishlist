@@ -426,13 +426,25 @@
         <div class="hero">
             <h1 class="hero-title">🎄 Ho Ho Ho ! 🎁</h1>
             
+            <!-- Sélecteur de personne avec tabs -->
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-flex; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 50px; padding: 5px; border: 2px solid rgba(255, 255, 255, 0.2);">
+                    <button id="tab-gregory" onclick="selectPerson('gregory')" style="padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); color: white; box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);">
+                        👨 Grégory
+                    </button>
+                    <button id="tab-barbara" onclick="selectPerson('barbara')" style="padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: transparent; color: rgba(255, 255, 255, 0.7); margin-left: 5px;">
+                        👩 Barbara
+                    </button>
+                </div>
+            </div>
+            
             <div class="hero-intro">
-                <h2>Alors comme ça, tu sais pas quoi offrir à Grégory ? 🤔</h2>
+                <h2 id="intro-title">Alors comme ça, tu sais pas quoi offrir à Grégory ? 🤔</h2>
                 <p>
                     <span class="emoji">🎅</span> T'inquiète, c'est normal ! Trouver LE cadeau parfait, c'est toujours un casse-tête...
                 </p>
                 <p>
-                    <span class="emoji">✨</span> Du coup, j'ai décidé de te faciliter la vie ! Voici quelques idées de trucs qui lui feraient super plaisir pour Noël.
+                    <span class="emoji">✨</span> Du coup, <span id="person-pronoun">il a</span> décidé de te faciliter la vie ! Voici quelques idées de trucs qui <span id="person-pronoun2">lui</span> feraient super plaisir pour Noël.
                 </p>
                 <p>
                     <span class="emoji">🎯</span> Tu peux cliquer sur "Je réserve ce cadeau" pour que les autres sachent que tu t'en occupes. Pas de stress, pas de doublon !
@@ -447,6 +459,14 @@
         <div id="admin-section" class="card hidden">
             <h2 style="margin-bottom: 25px; color: #2c5364; font-size: 2em;">✨ Ajouter un souhait</h2>
             <form id="wishForm">
+                <div class="form-group">
+                    <label for="person">Pour qui ? *</label>
+                    <select id="person" required>
+                        <option value="gregory">Grégory</option>
+                        <option value="barbara">Barbara</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label for="title">Titre *</label>
                     <input type="text" id="title" required placeholder="Ex: Livre 'Atomic Habits'">
@@ -481,11 +501,11 @@
                     <input type="url" id="image_url" placeholder="https://exemple.com/image.jpg">
                 </div>
 
-                <button type="submit">Ajouter à ma liste 🎁</button>
+                <button type="submit">Ajouter à la liste 🎁</button>
             </form>
         </div>
 
-        <h2 class="section-title">🎁 Les Cadeaux qui me feraient plaisir</h2>
+        <h2 class="section-title" id="section-title">🎁 Les Cadeaux qui feraient plaisir à <span id="current-person-name">Grégory</span></h2>
 
         <!-- Liste des souhaits -->
         <div id="wishlist-container">
@@ -494,12 +514,18 @@
     </div>
 
     <script>
-        // ⚠️ CONFIGURATION SUPABASE - À REMPLACER
         const SUPABASE_URL = 'https://unjeobvydcaiwpomvztn.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuamVvYnZ5ZGNhaXdwb212enRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNjcwMzMsImV4cCI6MjA3OTk0MzAzM30.TfccRUL1bmMU1AReNds1Mrnp43mCOqwWyU1sz819LAw';
 
         let supabase;
         let isAdmin = false;
+        let currentPerson = 'gregory'; // Par défaut on affiche Grégory
+
+        // URLs des images pour les snowflakes
+        const personImages = {
+            gregory: 'https://raw.githubusercontent.com/Rezalowx/christmas-wishlist/main/images/gregory.jpg',
+            barbara: 'https://raw.githubusercontent.com/Rezalowx/christmas-wishlist/main/images/barbara.jpg' 
+        };
 
         // Initialiser Supabase
         if (SUPABASE_URL !== 'TON_URL_SUPABASE') {
@@ -518,6 +544,45 @@
             document.getElementById('admin-toggle').classList.remove('hidden');
             document.getElementById('admin-section').classList.remove('hidden');
             document.getElementById('admin-toggle-text').textContent = '🔓 Mode Admin';
+        }
+
+        // Fonction pour changer de personne
+        function selectPerson(person) {
+            currentPerson = person;
+            updateUI();
+            updateTabs();
+            loadWishlist();
+            recreateSnowflakes();
+        }
+
+        // Mettre à jour les tabs (actif/inactif)
+        function updateTabs() {
+            const tabGregory = document.getElementById('tab-gregory');
+            const tabBarbara = document.getElementById('tab-barbara');
+
+            const activeStyle = 'padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); color: white; box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);';
+            const inactiveStyle = 'padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: transparent; color: rgba(255, 255, 255, 0.7);';
+
+            if (currentPerson === 'gregory') {
+                tabGregory.style.cssText = activeStyle;
+                tabBarbara.style.cssText = inactiveStyle + ' margin-left: 5px;';
+            } else {
+                tabBarbara.style.cssText = activeStyle;
+                tabGregory.style.cssText = inactiveStyle + ' margin-right: 5px;';
+            }
+        }
+
+        // Mettre à jour l'interface selon la personne
+        function updateUI() {
+            const isGregory = currentPerson === 'gregory';
+            const personName = isGregory ? 'Grégory' : 'Barbara';
+            const pronoun = isGregory ? 'il a' : 'elle a';
+            const pronoun2 = isGregory ? 'lui' : 'elle';
+
+            document.getElementById('intro-title').textContent = `Alors comme ça, tu sais pas quoi offrir à ${personName} ? 🤔`;
+            document.getElementById('person-pronoun').textContent = pronoun;
+            document.getElementById('person-pronoun2').textContent = pronoun2;
+            document.getElementById('current-person-name').textContent = personName;
         }
 
         // Toggle mode admin
@@ -556,14 +621,16 @@
                 const { data, error } = await supabase
                     .from('wishlist_items')
                     .select('*')
+                    .eq('person', currentPerson) // Filtrer par personne
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
                 if (data.length === 0) {
+                    const personName = currentPerson === 'gregory' ? 'Grégory' : 'Barbara';
                     container.innerHTML = `
                         <div class="card" style="text-align: center;">
-                            <h2>🎅 Liste vide pour l'instant</h2>
+                            <h2>🎅 Liste vide pour ${personName} pour l'instant</h2>
                             <p style="margin-top: 15px; color: #666;">Activez le mode admin pour ajouter des souhaits !</p>
                         </div>
                     `;
@@ -638,6 +705,7 @@
             }
 
             const formData = {
+                person: document.getElementById('person').value,
                 title: document.getElementById('title').value,
                 description: document.getElementById('description').value || null,
                 url: document.getElementById('url').value || null,
@@ -663,11 +731,13 @@
 
         // Réserver un item
         async function reserveItem(id) {
+            const name = prompt('Ton prénom pour réserver ce cadeau :');
+            if (!name) return;
 
             try {
                 const { error } = await supabase
                     .from('wishlist_items')
-                    .update({ reserved_by: "quelqu'un" })
+                    .update({ reserved_by: name })
                     .eq('id', id);
 
                 if (error) throw error;
@@ -698,42 +768,51 @@
         }
 
         // Charger au démarrage
+        updateUI();
+        updateTabs();
         loadWishlist();
 
         // Effet de neige (ou de têtes qui tombent !)
-function createSnowflakes() {
-    const snowflakesContainer = document.querySelector('.snowflakes');
-    const snowflakeCount = 50;
+        function createSnowflakes() {
+            const snowflakesContainer = document.querySelector('.snowflakes');
+            const snowflakeCount = 50;
 
-    // Ton image !
-    const imageURL = 'https://github.com/Rezalowx/christmas-wishlist/blob/main/images/AB89832A-4034-41B2-BD26-CA2891E38123_4_5005_c.jpeg?raw=true';
+            // Image selon la personne courante
+            const imageURL = personImages[currentPerson];
 
-    for (let i = 0; i < snowflakeCount; i++) {
-        const snowflake = document.createElement('div');
-        snowflake.classList.add('snowflake');
-        
-        // Si une image est définie, on l'utilise, sinon on garde les flocons
-        if (imageURL) {
-            const img = document.createElement('img');
-            img.src = imageURL;
-            img.style.width = (Math.random() * 30 + 20) + 'px'; // Taille entre 20 et 50px
-            img.style.height = 'auto';
-            img.style.borderRadius = '50%'; // Forme ronde
-            snowflake.appendChild(img);
-        } else {
-            snowflake.innerHTML = '❄';
-            snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
+            for (let i = 0; i < snowflakeCount; i++) {
+                const snowflake = document.createElement('div');
+                snowflake.classList.add('snowflake');
+                
+                // Si une image est définie, on l'utilise, sinon on garde les flocons
+                if (imageURL) {
+                    const img = document.createElement('img');
+                    img.src = imageURL;
+                    img.style.width = (Math.random() * 30 + 20) + 'px'; // Taille entre 20 et 50px
+                    img.style.height = 'auto';
+                    img.style.borderRadius = '50%'; // Forme ronde
+                    snowflake.appendChild(img);
+                } else {
+                    snowflake.innerHTML = '❄';
+                    snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
+                }
+                
+                snowflake.style.left = Math.random() * 100 + '%';
+                snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
+                snowflake.style.animationDelay = Math.random() * 5 + 's';
+                snowflake.style.opacity = Math.random() * 0.5 + 0.3;
+                snowflakesContainer.appendChild(snowflake);
+            }
         }
-        
-        snowflake.style.left = Math.random() * 100 + '%';
-        snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
-        snowflake.style.animationDelay = Math.random() * 5 + 's';
-        snowflake.style.opacity = Math.random() * 0.5 + 0.3;
-        snowflakesContainer.appendChild(snowflake);
-    }
-}
 
-createSnowflakes();
+        // Fonction pour recréer les snowflakes avec la nouvelle image
+        function recreateSnowflakes() {
+            const snowflakesContainer = document.querySelector('.snowflakes');
+            snowflakesContainer.innerHTML = ''; // Vider
+            createSnowflakes(); // Recréer avec la nouvelle personne
+        }
+
+        createSnowflakes();
     </script>
 </body>
 </html>
