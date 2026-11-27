@@ -704,7 +704,7 @@
                         ${item.url ? `<a href="${item.url}" target="_blank" class="link-btn">🔗 Voir le produit →</a>` : ''}
                         
                         ${item.reserved_by 
-                            ? `<div class="reserved-label">✅ Réservé par ${item.reserved_by}</div>
+                            ? `<div class="reserved-label">✅ Déjà réservé</div>
                                <button class="cancel-reservation-btn" onclick="cancelReservation('${item.id}')">Annuler ma réservation</button>`
                             : `<button class="reserve-btn" onclick="reserveItem('${item.id}')">Je réserve ce cadeau ! 🎁</button>`
                         }
@@ -749,7 +749,7 @@
 
         // Réserver un item
         async function reserveItem(id) {
-            const name = prompt('Ton prénom pour réserver ce cadeau :');
+            const name = prompt("Ton prénom pour réserver ce cadeau (il ne sera affiché à personne, il sert seulement si tu veux annuler plus tard) :");
             if (!name) return;
 
             try {
