@@ -331,6 +331,23 @@
             box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
         }
 
+        .cancel-reservation-btn {
+            display: block;
+            background: none;
+            box-shadow: none;
+            color: #888;
+            padding: 4px 0;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-decoration: underline;
+        }
+
+        .cancel-reservation-btn:hover {
+            color: #ee5a6f;
+            transform: none;
+            box-shadow: none;
+        }
+
         .delete-btn {
             position: absolute;
             top: 15px;
@@ -687,7 +704,8 @@
                         ${item.url ? `<a href="${item.url}" target="_blank" class="link-btn">🔗 Voir le produit →</a>` : ''}
                         
                         ${item.reserved_by 
-                            ? `<div class="reserved-label">✅ Réservé par ${item.reserved_by}</div>` 
+                            ? `<div class="reserved-label">✅ Réservé par ${item.reserved_by}</div>
+                               <button class="cancel-reservation-btn" onclick="cancelReservation('${item.id}')">Annuler ma réservation</button>`
                             : `<button class="reserve-btn" onclick="reserveItem('${item.id}')">Je réserve ce cadeau ! 🎁</button>`
                         }
                     </div>
@@ -743,6 +761,40 @@
                 if (error) throw error;
 
                 alert('🎁 Cadeau réservé ! Merci !');
+                loadWishlist();
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Annuler une réservation (ouvert à tous, on redemande le prénom pour éviter les erreurs)
+        async function cancelReservation(id) {
+            const name = prompt('Pour annuler, tape le prénom utilisé pour la réservation :');
+            if (!name) return;
+
+            try {
+                const { data, error: fetchError } = await supabase
+                    .from('wishlist_items')
+                    .select('reserved_by')
+                    .eq('id', id)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                const normalize = s => (s || '').trim().toLowerCase();
+                if (normalize(data.reserved_by) !== normalize(name)) {
+                    alert("Ce prénom ne correspond pas à la réservation. Rien n'a été annulé.");
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from('wishlist_items')
+                    .update({ reserved_by: null })
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                alert('Réservation annulée, le cadeau est de nouveau disponible.');
                 loadWishlist();
             } catch (error) {
                 alert('Erreur: ' + error.message);
