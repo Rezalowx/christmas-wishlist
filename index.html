@@ -684,6 +684,61 @@
             box-shadow: 0 0 0 4px rgba(233, 196, 106, 0.15);
         }
 
+        /* ---------- Choix de l'image ---------- */
+        .image-picker {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .image-preview {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 16px;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            font-size: 2.6rem;
+            background: linear-gradient(135deg, #12304a, #3a1a2e);
+            border: 1px solid var(--line);
+        }
+
+        .image-preview img { width: 100%; height: 100%; object-fit: cover; animation: rise 0.6s var(--ease); }
+        .image-preview.loading::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.12) 50%, transparent 70%);
+            animation: sheen 1.2s infinite;
+        }
+
+        .image-actions { display: flex; flex-direction: column; gap: 12px; }
+        .hint { color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+        .hint.ok { color: #9fe3cf; }
+        .file-btn { width: auto; align-self: start; }
+        details summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+
+        .photo-btn {
+            position: absolute;
+            top: 14px;
+            right: 56px;
+            z-index: 3;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(7, 13, 26, 0.6);
+            cursor: pointer;
+            transition: transform 0.3s var(--ease), background 0.3s;
+        }
+
+        .photo-btn:hover { background: rgba(233, 196, 106, 0.6); transform: scale(1.1); }
+
+        @media (max-width: 640px) {
+            .image-picker { grid-template-columns: 96px 1fr; }
+        }
+
         .hidden { display: none !important; }
 
         /* ---------- Fenêtre (remplace prompt / alert) ---------- */
@@ -856,6 +911,29 @@
                 </div>
 
                 <div class="form-group full">
+                    <label for="url">Lien du produit</label>
+                    <input type="url" id="url" inputmode="url" placeholder="Colle le lien Amazon, Steam, Fnac…">
+                </div>
+
+                <div class="form-group full">
+                    <label>Image</label>
+                    <div class="image-picker">
+                        <div class="image-preview" id="image-preview"><span>🎁</span></div>
+                        <div class="image-actions">
+                            <p class="hint" id="image-hint">L'image se remplit toute seule quand tu colles le lien du produit. Sinon, choisis une photo ou une capture d'écran.</p>
+                            <label class="btn btn-ghost file-btn">
+                                📷 Choisir une photo
+                                <input type="file" id="image_file" accept="image/*" hidden>
+                            </label>
+                            <details>
+                                <summary>Ou coller l'adresse d'une image</summary>
+                                <input type="url" id="image_url" inputmode="url" placeholder="https://exemple.com/image.jpg">
+                            </details>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group full">
                     <label for="title">Titre *</label>
                     <input type="text" id="title" required placeholder="Ex : Livre « Atomic Habits »">
                 </div>
@@ -866,24 +944,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="url">Lien</label>
-                    <input type="url" id="url" placeholder="https://www.amazon.fr/…">
-                </div>
-
-                <div class="form-group">
                     <label for="price">Prix approximatif (€)</label>
-                    <input type="number" id="price" step="0.01" placeholder="29.99">
-                </div>
-
-                <div class="form-group full">
-                    <label for="image_url">Image (URL)</label>
-                    <input type="url" id="image_url" placeholder="https://exemple.com/image.jpg">
+                    <input type="number" id="price" step="0.01" inputmode="decimal" placeholder="29.99">
                 </div>
 
                 <div class="form-group full">
                     <button type="submit" class="btn">Ajouter à la liste</button>
                 </div>
             </form>
+            <input type="file" id="card-image-file" accept="image/*" hidden>
         </section>
 
         <div class="section-head">
@@ -1144,7 +1213,8 @@
                 <article class="wish-item ${reserved ? 'reserved' : ''}">
                     <div class="wish-media">
                         <span class="priority priority-${esc(item.priority)}"><i></i><span>${priority}</span></span>
-                        ${isAdmin ? `<button class="delete-btn" title="Supprimer" onclick="deleteWish('${esc(item.id)}')">×</button>` : ''}
+                        ${isAdmin ? `<button class="photo-btn" title="Changer l'image" onclick="changeCardImage('${esc(item.id)}')">📷</button>
+                                    <button class="delete-btn" title="Supprimer" onclick="deleteWish('${esc(item.id)}')">×</button>` : ''}
                         ${item.image_url
                             ? `<img src="${esc(item.image_url)}" alt="${esc(item.title)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;placeholder&quot;>🎁</div>'">`
                             : `<div class="placeholder">🎁</div>`}
@@ -1219,7 +1289,7 @@
                 url: document.getElementById('url').value || null,
                 price: document.getElementById('price').value || null,
                 priority: document.getElementById('priority').value,
-                image_url: document.getElementById('image_url').value || null
+                image_url: imageValue || null
             };
 
             try {
@@ -1231,6 +1301,126 @@
 
                 toast('✨ Souhait ajouté !');
                 e.target.reset();
+                setImage(null);
+                loadWishlist();
+            } catch (error) {
+                toast('Erreur : ' + error.message, 'error');
+            }
+        });
+
+        // ---------- Image du cadeau (lien auto, photo ou adresse) ----------
+        let imageValue = null;      // ce qui sera enregistré dans image_url
+        let imageFromPhoto = false; // une photo choisie à la main n'est jamais écrasée par le lien
+
+        function setImage(src, hint) {
+            imageValue = src;
+            const preview = document.getElementById('image-preview');
+            preview.classList.remove('loading');
+            preview.innerHTML = src ? `<img src="${esc(src)}" alt="">` : '<span>🎁</span>';
+            const hintEl = document.getElementById('image-hint');
+            hintEl.textContent = hint || "L'image se remplit toute seule quand tu colles le lien du produit. Sinon, choisis une photo ou une capture d'écran.";
+            hintEl.classList.toggle('ok', !!src);
+            if (!src) imageFromPhoto = false;
+        }
+
+        // Réduit la photo (les photos de tablette sont énormes) et la transforme en texte enregistrable
+        function resizeImage(file, maxSize = 800, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(url);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Impossible de lire cette image")); };
+                img.src = url;
+            });
+        }
+
+        // Va chercher l'image principale de la page du produit (Amazon, Steam, Fnac…)
+        async function fetchProductImage(link) {
+            // Service gratuit Microlink : quelques récupérations par jour et par appareil
+            const res = await fetch('https://api.microlink.io/?url=' + encodeURIComponent(link));
+            if (res.status === 429) throw new Error('limite');
+            const json = await res.json();
+            return json.status === 'success' ? json.data?.image?.url || null : null;
+        }
+
+        let lastFetchedLink = '';
+        async function onProductLink() {
+            const link = document.getElementById('url').value.trim();
+            if (!/^https?:\/\//i.test(link) || link === lastFetchedLink || imageFromPhoto) return;
+            lastFetchedLink = link;
+
+            const preview = document.getElementById('image-preview');
+            preview.classList.add('loading');
+            document.getElementById('image-hint').textContent = "Je cherche l'image du produit…";
+
+            try {
+                const image = await fetchProductImage(link);
+                if (document.getElementById('url').value.trim() !== link || imageFromPhoto) return;
+                if (image) {
+                    setImage(image, '✓ Image récupérée depuis le lien.');
+                } else {
+                    setImage(null, "Pas d'image trouvée sur ce site. Choisis une photo ou une capture d'écran.");
+                }
+            } catch (error) {
+                setImage(null, error.message === 'limite'
+                    ? "Limite de récupération automatique atteinte pour aujourd'hui. Choisis une photo ou une capture d'écran."
+                    : "Pas d'image trouvée sur ce site. Choisis une photo ou une capture d'écran.");
+            }
+        }
+
+        let linkTimer;
+        document.getElementById('url').addEventListener('input', () => {
+            clearTimeout(linkTimer);
+            linkTimer = setTimeout(onProductLink, 500);
+        });
+
+        document.getElementById('image_file').addEventListener('change', async e => {
+            const file = e.target.files[0];
+            e.target.value = '';
+            if (!file) return;
+            try {
+                imageFromPhoto = true;
+                setImage(await resizeImage(file), '✓ Photo ajoutée.');
+                imageFromPhoto = true;
+            } catch (error) {
+                toast(error.message, 'error');
+            }
+        });
+
+        document.getElementById('image_url').addEventListener('input', e => {
+            const src = e.target.value.trim();
+            imageFromPhoto = !!src;
+            setImage(src || null, src ? '✓ Image ajoutée.' : '');
+            imageFromPhoto = !!src;
+        });
+
+        // Changer l'image d'un cadeau déjà dans la liste (mode admin)
+        let cardImageTarget = null;
+        function changeCardImage(id) {
+            cardImageTarget = id;
+            document.getElementById('card-image-file').click();
+        }
+
+        document.getElementById('card-image-file').addEventListener('change', async e => {
+            const file = e.target.files[0];
+            e.target.value = '';
+            if (!file || !cardImageTarget) return;
+            try {
+                const image = await resizeImage(file);
+                const { error } = await db
+                    .from('wishlist_items')
+                    .update({ image_url: image })
+                    .eq('id', cardImageTarget);
+                if (error) throw error;
+                toast('📷 Image mise à jour');
                 loadWishlist();
             } catch (error) {
                 toast('Erreur : ' + error.message, 'error');
