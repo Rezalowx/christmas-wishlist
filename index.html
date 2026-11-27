@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>La Liste de Noël 🎄</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -917,7 +917,7 @@
         const SUPABASE_URL = 'https://unjeobvydcaiwpomvztn.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuamVvYnZ5ZGNhaXdwb212enRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNjcwMzMsImV4cCI6MjA3OTk0MzAzM30.TfccRUL1bmMU1AReNds1Mrnp43mCOqwWyU1sz819LAw';
 
-        let supabase;
+        let db; // client Supabase (pas « supabase », déjà pris par la bibliothèque)
         let isAdmin = false;
         let currentPerson = 'gregory'; // Par défaut on affiche Grégory
 
@@ -938,7 +938,7 @@
 
         // Initialiser Supabase
         if (window.supabase && SUPABASE_URL !== 'TON_URL_SUPABASE') {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
 
         // Mode admin via l'URL (ex : ?admin=noel2025)
@@ -1086,7 +1086,7 @@
             const counter = document.getElementById('counter');
             counter.textContent = '';
 
-            if (!supabase) {
+            if (!db) {
                 container.innerHTML = `
                     <div class="panel center">
                         <h2>Configuration requise</h2>
@@ -1098,7 +1098,7 @@
             container.innerHTML = `<div class="wishlist-grid">${'<div class="skeleton"></div>'.repeat(3)}</div>`;
 
             try {
-                const { data, error } = await supabase
+                const { data, error } = await db
                     .from('wishlist_items')
                     .select('*')
                     .eq('person', currentPerson) // Filtrer par personne
@@ -1207,7 +1207,7 @@
         document.getElementById('wishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            if (!supabase) {
+            if (!db) {
                 toast("Supabase n'est pas configuré", 'error');
                 return;
             }
@@ -1223,7 +1223,7 @@
             };
 
             try {
-                const { error } = await supabase
+                const { error } = await db
                     .from('wishlist_items')
                     .insert([formData]);
 
@@ -1249,7 +1249,7 @@
             if (!name) return;
 
             try {
-                const { error } = await supabase
+                const { error } = await db
                     .from('wishlist_items')
                     .update({ reserved_by: name })
                     .eq('id', id);
@@ -1275,7 +1275,7 @@
             if (!name) return;
 
             try {
-                const { data, error: fetchError } = await supabase
+                const { data, error: fetchError } = await db
                     .from('wishlist_items')
                     .select('reserved_by')
                     .eq('id', id)
@@ -1289,7 +1289,7 @@
                     return;
                 }
 
-                const { error } = await supabase
+                const { error } = await db
                     .from('wishlist_items')
                     .update({ reserved_by: null })
                     .eq('id', id);
@@ -1308,7 +1308,7 @@
             if (!confirm('Supprimer ce souhait ?')) return;
 
             try {
-                const { error } = await supabase
+                const { error } = await db
                     .from('wishlist_items')
                     .delete()
                     .eq('id', id);
