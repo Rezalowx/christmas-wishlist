@@ -3,479 +3,841 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Liste de Noël de Grégory 🎄</title>
+    <title>La Liste de Noël 🎄</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --night: #070d1a;
+            --night-2: #0c1628;
+            --pine: #0f3b33;
+            --gold: #e9c46a;
+            --gold-soft: #f3dca0;
+            --cranberry: #d1495b;
+            --snow: #f6f3ec;
+            --muted: rgba(246, 243, 236, 0.62);
+            --line: rgba(246, 243, 236, 0.12);
+            --glass: rgba(255, 255, 255, 0.055);
+            --glass-strong: rgba(255, 255, 255, 0.09);
+            --radius: 22px;
+            --ease: cubic-bezier(0.22, 1, 0.36, 1);
+            --serif: 'Fraunces', Georgia, serif;
+            --sans: 'Inter', system-ui, -apple-system, sans-serif;
         }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
 
         body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            font-family: var(--sans);
+            background: var(--night);
+            color: var(--snow);
             min-height: 100vh;
-            position: relative;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* Effet de neige */
+        /* ---------- Fond : aurore animée + grain ---------- */
+        .aurora {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            background: radial-gradient(ellipse at 50% 120%, var(--night-2), var(--night) 70%);
+        }
+
+        .aurora span {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.55;
+            animation: drift 22s var(--ease) infinite alternate;
+        }
+
+        .aurora span:nth-child(1) { width: 55vw; height: 55vw; left: -10vw; top: -20vw; background: #145a4c; }
+        .aurora span:nth-child(2) { width: 45vw; height: 45vw; right: -12vw; top: 5vh; background: #5b1f33; animation-duration: 28s; animation-delay: -6s; }
+        .aurora span:nth-child(3) { width: 40vw; height: 40vw; left: 30vw; bottom: -20vw; background: #1b3566; animation-duration: 32s; animation-delay: -12s; }
+
+        @keyframes drift {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(6vw, 4vh) scale(1.12); }
+            100% { transform: translate(-4vw, 8vh) scale(0.95); }
+        }
+
+        .grain {
+            position: fixed;
+            inset: -50%;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.06;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            animation: grain 1.2s steps(4) infinite;
+        }
+
+        @keyframes grain {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-3%, 2%); }
+            50% { transform: translate(2%, -3%); }
+            75% { transform: translate(-2%, -1%); }
+        }
+
+        /* ---------- Neige (les têtes qui tombent) ---------- */
         .snowflakes {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
+            z-index: 2;
             pointer-events: none;
-            z-index: 1;
+            overflow: hidden;
         }
 
         .snowflake {
             position: absolute;
-            top: -10px;
-            color: white;
-            font-size: 1em;
-            opacity: 0.8;
+            top: -80px;
+            will-change: transform;
             animation: fall linear infinite;
         }
 
-        @keyframes fall {
-            to {
-                transform: translateY(100vh);
-            }
+        .snowflake > .sway {
+            animation: sway ease-in-out infinite alternate;
         }
 
+        .snowflake img {
+            display: block;
+            border-radius: 50%;
+            object-fit: cover;
+            aspect-ratio: 1;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 6px 18px rgba(0, 0, 0, 0.35);
+            animation: spin linear infinite;
+        }
+
+        .snowflake .flake {
+            color: white;
+            display: block;
+        }
+
+        /* Profondeur : les petites têtes sont floues et lointaines */
+        .snowflake.far  { filter: blur(1.5px); opacity: 0.35; }
+        .snowflake.mid  { opacity: 0.6; }
+        .snowflake.near { opacity: 0.9; }
+
+        @keyframes fall { to { transform: translateY(calc(100vh + 120px)); } }
+        @keyframes sway { from { transform: translateX(-28px); } to { transform: translateX(28px); } }
+        @keyframes spin { from { transform: rotate(-25deg); } to { transform: rotate(335deg); } }
+
+        /* ---------- Layout ---------- */
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
             position: relative;
-            z-index: 2;
+            z-index: 3;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px 120px;
         }
 
+        /* ---------- Bouton admin ---------- */
         .admin-toggle {
             position: fixed;
-            top: 25px;
-            right: 25px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            padding: 12px 24px;
-            border-radius: 30px;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(7, 13, 26, 0.55);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            color: var(--snow);
+            font: 600 0.85rem var(--sans);
             cursor: pointer;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            transition: all 0.3s;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            font-weight: 600;
-            z-index: 1000;
+            transition: border-color 0.3s, transform 0.3s var(--ease);
         }
 
-        .admin-toggle:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: scale(1.05);
-        }
+        .admin-toggle:hover { border-color: var(--gold); transform: translateY(-2px); }
 
-        /* Hero Section */
+        /* ---------- Hero ---------- */
         .hero {
             text-align: center;
-            padding: 60px 20px 40px;
-            color: white;
+            padding: 110px 0 40px;
         }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font: 600 0.75rem var(--sans);
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 28px;
+        }
+
+        .eyebrow::before, .eyebrow::after {
+            content: '';
+            width: 36px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold));
+        }
+
+        .eyebrow::after { transform: scaleX(-1); }
 
         .hero-title {
-            font-size: 4.5em;
-            font-weight: 800;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #ffe66d, #ff6b6b);
-            background-size: 300% 300%;
+            font-family: var(--serif);
+            font-weight: 400;
+            font-size: clamp(3rem, 9vw, 7rem);
+            line-height: 0.95;
+            letter-spacing: -0.03em;
+        }
+
+        .hero-title .word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(40px) rotate(4deg);
+            filter: blur(8px);
+            animation: rise 1.1s var(--ease) forwards;
+        }
+
+        .hero-title em {
+            font-style: italic;
+            background: linear-gradient(100deg, var(--gold) 20%, var(--snow) 40%, var(--gold) 60%);
+            background-size: 250% 100%;
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: gradient 5s ease infinite;
-            text-shadow: 0 0 30px rgba(255,107,107,0.3);
+            animation: rise 1.1s var(--ease) forwards, shimmer 5s linear 1.2s infinite;
         }
 
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        @keyframes rise { to { opacity: 1; transform: none; filter: blur(0); } }
+        @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -100% 0; } }
+
+        .fade-up {
+            opacity: 0;
+            transform: translateY(24px);
+            animation: rise 1s var(--ease) forwards;
         }
 
-        .hero-intro {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 25px;
-            padding: 40px;
-            max-width: 800px;
-            margin: 0 auto 40px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        /* ---------- Sélecteur de personne ---------- */
+        .tabs {
+            position: relative;
+            display: inline-flex;
+            margin: 44px 0 0;
+            padding: 6px;
+            border-radius: 999px;
+            background: var(--glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
         }
 
-        .hero-intro h2 {
-            font-size: 2em;
-            margin-bottom: 20px;
-            color: #ffe66d;
+        .tab-indicator {
+            position: absolute;
+            top: 6px;
+            bottom: 6px;
+            left: 6px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+            box-shadow: 0 8px 30px rgba(233, 196, 106, 0.35);
+            transition: transform 0.6s var(--ease), width 0.6s var(--ease);
         }
 
-        .hero-intro p {
-            font-size: 1.2em;
-            line-height: 1.8;
-            margin-bottom: 15px;
-            color: rgba(255, 255, 255, 0.95);
-        }
-
-        .hero-intro .emoji {
-            font-size: 1.5em;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            margin-bottom: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #2c5364;
-            font-size: 1.05em;
-        }
-
-        input, textarea, select {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 16px;
-            transition: all 0.3s;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: #4ecdc4;
-            box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        button {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-            color: white;
-            padding: 15px 35px;
+        .tab {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 30px 12px 14px;
             border: none;
-            border-radius: 12px;
-            font-size: 17px;
+            background: none;
+            border-radius: 999px;
+            color: var(--muted);
+            font: 600 1rem var(--sans);
             cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 700;
-            font-family: 'Poppins', sans-serif;
-            box-shadow: 0 10px 25px rgba(255, 107, 107, 0.3);
+            transition: color 0.4s var(--ease);
         }
 
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.4);
+        .tab img {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            transition: transform 0.5s var(--ease), border-color 0.4s;
         }
 
-        button:active {
-            transform: translateY(-1px);
+        .tab.active { color: var(--night); }
+        .tab.active img { border-color: var(--night); transform: rotate(-8deg) scale(1.08); }
+        .tab:not(.active):hover { color: var(--snow); }
+
+        /* ---------- Intro ---------- */
+        .intro {
+            max-width: 640px;
+            margin: 48px auto 0;
+            font-size: 1.08rem;
+            line-height: 1.75;
+            color: var(--muted);
+        }
+
+        .intro h2 {
+            font-family: var(--serif);
+            font-weight: 400;
+            font-size: clamp(1.6rem, 3.6vw, 2.2rem);
+            line-height: 1.2;
+            color: var(--snow);
+            margin-bottom: 18px;
+        }
+
+        .intro h2 em { color: var(--gold); }
+        .intro p + p { margin-top: 10px; }
+
+        .swap { transition: opacity 0.35s, transform 0.35s var(--ease), filter 0.35s; }
+        .swap.out { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+
+        /* ---------- Titre de section ---------- */
+        .section-head {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 100px 0 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--line);
         }
 
         .section-title {
-            text-align: center;
-            color: white;
-            font-size: 2.5em;
-            font-weight: 700;
-            margin: 50px 0 30px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            font-family: var(--serif);
+            font-weight: 400;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            letter-spacing: -0.02em;
         }
 
+        .section-title em { color: var(--gold); }
+
+        .counter {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .counter strong { color: var(--snow); font-weight: 600; }
+
+        /* ---------- Grille de cadeaux ---------- */
         .wishlist-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 26px;
         }
 
         .wish-item {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 0;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            transition: all 0.3s;
+            --mx: 50%;
+            --my: 50%;
+            --rx: 0deg;
+            --ry: 0deg;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            border-radius: var(--radius);
+            background: var(--glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
             overflow: hidden;
-            border: 2px solid transparent;
+            opacity: 0;
+            transform: translateY(40px) scale(0.97);
+            transition: opacity 0.9s var(--ease), transform 0.9s var(--ease), border-color 0.4s;
+            transition-delay: var(--delay, 0s);
         }
 
-        .wish-item:hover {
-            transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            border-color: rgba(78, 205, 196, 0.5);
+        .wish-item.visible {
+            opacity: 1;
+            transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry));
+            transition: transform 0.25s ease-out, border-color 0.4s, opacity 0.9s var(--ease);
         }
 
-        .wish-item.reserved {
-            opacity: 0.75;
-            filter: grayscale(30%);
+        /* Halo qui suit la souris */
+        .wish-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            border-radius: inherit;
+            background: radial-gradient(420px circle at var(--mx) var(--my), rgba(233, 196, 106, 0.14), transparent 45%);
+            opacity: 0;
+            transition: opacity 0.4s;
         }
 
-        .wish-item-image-container {
-            height: 250px;
-            overflow: hidden;
+        .wish-item:hover { border-color: rgba(233, 196, 106, 0.45); }
+        .wish-item:hover::before { opacity: 1; }
+
+        .wish-media {
             position: relative;
+            aspect-ratio: 4 / 3;
+            overflow: hidden;
+            background: linear-gradient(135deg, #12304a, #3a1a2e);
         }
 
-        .wish-item img {
+        .wish-media img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.3s;
+            transition: transform 1.2s var(--ease);
         }
 
-        .wish-item:hover img {
-            transform: scale(1.1);
+        .wish-item:hover .wish-media img { transform: scale(1.07); }
+
+        .wish-media::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 55%, rgba(7, 13, 26, 0.65));
         }
 
-        .wish-item-content {
-            padding: 25px;
+        .placeholder {
+            display: grid;
+            place-items: center;
+            height: 100%;
+            font-size: 4rem;
+            animation: bob 4s ease-in-out infinite;
         }
 
-        .wish-title {
-            font-size: 1.5em;
-            color: #2c5364;
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-
-        .wish-description {
-            color: #666;
-            margin-bottom: 15px;
-            line-height: 1.7;
-            font-size: 0.95em;
-        }
-
-        .wish-price {
-            font-size: 1.8em;
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-            margin-bottom: 15px;
-        }
+        @keyframes bob { 50% { transform: translateY(-8px) rotate(-4deg); } }
 
         .priority {
-            display: inline-block;
-            padding: 8px 20px;
-            border-radius: 25px;
-            font-size: 0.85em;
-            font-weight: 700;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .priority-high {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
-        }
-
-        .priority-medium {
-            background: linear-gradient(135deg, #ffe66d 0%, #ffd93d 100%);
-            color: #333;
-            box-shadow: 0 4px 15px rgba(255, 230, 109, 0.4);
-        }
-
-        .priority-low {
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
-        }
-
-        .reserve-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-            padding: 15px;
-            margin-top: 15px;
-            font-size: 16px;
-            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.3);
-        }
-
-        .reserve-btn:hover {
-            box-shadow: 0 12px 30px rgba(78, 205, 196, 0.4);
-        }
-
-        .reserved-label {
-            background: linear-gradient(135deg, #95e1d3 0%, #4ecdc4 100%);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-size: 0.95em;
-            display: inline-block;
-            margin-bottom: 15px;
-            font-weight: 700;
-            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
-        }
-
-        .cancel-reservation-btn {
-            display: block;
-            background: none;
-            box-shadow: none;
-            color: #888;
-            padding: 4px 0;
-            font-size: 0.85em;
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.72rem;
             font-weight: 600;
-            text-decoration: underline;
+            letter-spacing: 0.04em;
+            background: rgba(7, 13, 26, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        .cancel-reservation-btn:hover {
-            color: #ee5a6f;
-            transform: none;
-            box-shadow: none;
+        .priority i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .priority-high   { color: #ff8a96; }
+        .priority-high i { animation: pulse 1.6s ease-in-out infinite; }
+        .priority-medium { color: var(--gold); }
+        .priority-low    { color: #7fd6bd; }
+        .priority span   { color: var(--snow); }
+
+        @keyframes pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(255, 138, 150, 0.7); }
+            100% { box-shadow: 0 0 0 9px rgba(255, 138, 150, 0); }
         }
 
         .delete-btn {
             position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 107, 107, 0.95);
-            color: white;
-            border: none;
+            top: 14px;
+            right: 14px;
+            z-index: 3;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(7, 13, 26, 0.6);
+            color: var(--snow);
+            font-size: 1.1rem;
             cursor: pointer;
-            font-size: 20px;
+            transition: background 0.3s, transform 0.3s var(--ease);
+        }
+
+        .delete-btn:hover { background: var(--cranberry); transform: rotate(90deg); }
+
+        .wish-body {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
-            transition: all 0.3s;
-            z-index: 10;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            padding: 22px 22px 24px;
         }
 
-        .delete-btn:hover {
-            background: #ff5252;
-            transform: scale(1.1);
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .link-btn {
-            color: #4ecdc4;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 15px;
-            font-weight: 700;
-            font-size: 1.05em;
-            transition: all 0.3s;
-        }
-
-        .link-btn:hover {
-            color: #44a08d;
-            transform: translateX(5px);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            color: white;
-            font-size: 1.5em;
+        .wish-title {
+            font-family: var(--serif);
+            font-size: 1.4rem;
+            line-height: 1.2;
             font-weight: 600;
         }
 
-        .placeholder-image {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4em;
-            color: white;
+        .wish-description {
+            color: var(--muted);
+            font-size: 0.93rem;
+            line-height: 1.6;
         }
 
-        @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2.5em;
-            }
+        .wish-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: auto;
+            padding-top: 12px;
+        }
 
-            .hero-intro h2 {
-                font-size: 1.5em;
-            }
+        .wish-price {
+            font-family: var(--serif);
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
 
-            .hero-intro p {
-                font-size: 1em;
-            }
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--snow);
+            font-size: 0.88rem;
+            font-weight: 500;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s, gap 0.3s var(--ease);
+        }
 
-            .section-title {
-                font-size: 2em;
-            }
+        .link-btn:hover { opacity: 1; gap: 10px; }
 
-            .wishlist-grid {
-                grid-template-columns: 1fr;
+        /* Bouton principal (réserver) */
+        .btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 14px;
+            font: 600 0.98rem var(--sans);
+            color: var(--night);
+            background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.3s var(--ease), box-shadow 0.3s;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+            transform: translateX(-120%);
+            transition: transform 0.8s var(--ease);
+        }
+
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 34px rgba(233, 196, 106, 0.3); }
+        .btn:hover::after { transform: translateX(120%); }
+        .btn:active { transform: translateY(0) scale(0.98); }
+
+        .btn-ghost {
+            color: var(--snow);
+            background: transparent;
+            border: 1px solid var(--line);
+        }
+
+        .btn-ghost:hover { box-shadow: none; border-color: var(--snow); }
+
+        .reserve-btn { margin-top: 16px; }
+
+        .reserved-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(127, 214, 189, 0.08);
+            border: 1px dashed rgba(127, 214, 189, 0.35);
+        }
+
+        .reserved-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #9fe3cf;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .cancel-reservation-btn {
+            border: none;
+            background: none;
+            color: var(--muted);
+            font: 500 0.8rem var(--sans);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .cancel-reservation-btn:hover { color: var(--cranberry); }
+
+        .wish-item.reserved .wish-media img,
+        .wish-item.reserved .placeholder { filter: grayscale(0.7) brightness(0.7); }
+
+        .wish-item.reserved .wish-media::before {
+            content: 'Réservé';
+            position: absolute;
+            z-index: 2;
+            top: 22px;
+            right: -38px;
+            padding: 6px 48px;
+            transform: rotate(35deg);
+            background: var(--cranberry);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ---------- Squelettes de chargement ---------- */
+        .skeleton {
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: var(--glass);
+            overflow: hidden;
+            height: 420px;
+            position: relative;
+        }
+
+        .skeleton::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
+            animation: sheen 1.6s infinite;
+        }
+
+        @keyframes sheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+        /* ---------- Panneaux (vide, erreur, admin) ---------- */
+        .panel {
+            padding: 40px;
+            border-radius: var(--radius);
+            background: var(--glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .panel.center { text-align: center; }
+        .panel h2 { font-family: var(--serif); font-weight: 400; font-size: 1.8rem; margin-bottom: 10px; }
+        .panel p { color: var(--muted); }
+
+        .admin-section { margin-top: 60px; }
+        .admin-section h2 { margin-bottom: 26px; }
+        .admin-section h2 em { color: var(--gold); }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px 20px;
+        }
+
+        .form-group.full { grid-column: 1 / -1; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: rgba(7, 13, 26, 0.5);
+            color: var(--snow);
+            font: 400 1rem var(--sans);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        select option { background: var(--night-2); }
+        textarea { min-height: 110px; resize: vertical; }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 4px rgba(233, 196, 106, 0.15);
+        }
+
+        .hidden { display: none !important; }
+
+        /* ---------- Fenêtre (remplace prompt / alert) ---------- */
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: rgba(4, 8, 16, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s var(--ease);
+        }
+
+        .modal.open { opacity: 1; pointer-events: auto; }
+
+        .modal-card {
+            width: min(440px, 100%);
+            padding: 32px;
+            border-radius: 24px;
+            background: linear-gradient(160deg, #13203a, #0b1424);
+            border: 1px solid var(--line);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px) scale(0.96);
+            transition: transform 0.5s var(--ease);
+        }
+
+        .modal.open .modal-card { transform: none; }
+        .modal-card .modal-icon { font-size: 2.2rem; margin-bottom: 10px; }
+        .modal-card h3 { font-family: var(--serif); font-weight: 400; font-size: 1.6rem; margin-bottom: 8px; }
+        .modal-card p { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+        .shake { animation: shake 0.45s; }
+
+        @keyframes shake {
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        /* ---------- Notifications ---------- */
+        .toasts {
+            position: fixed;
+            left: 50%;
+            bottom: 28px;
+            z-index: 110;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+
+        .toast {
+            padding: 13px 20px;
+            border-radius: 999px;
+            background: var(--snow);
+            color: var(--night);
+            font-weight: 600;
+            font-size: 0.92rem;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+            animation: toast-in 0.5s var(--ease), toast-out 0.4s ease-in 3.2s forwards;
+        }
+
+        .toast.error { background: var(--cranberry); color: white; }
+
+        @keyframes toast-in { from { opacity: 0; transform: translateY(20px) scale(0.9); } }
+        @keyframes toast-out { to { opacity: 0; transform: translateY(10px); } }
+
+        /* ---------- Confettis ---------- */
+        .confetti {
+            position: fixed;
+            z-index: 120;
+            width: 9px;
+            height: 14px;
+            border-radius: 2px;
+            pointer-events: none;
+        }
+
+        footer {
+            margin-top: 100px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 640px) {
+            .hero { padding-top: 90px; }
+            .tab { padding: 10px 20px 10px 10px; font-size: 0.92rem; }
+            .tab img { width: 28px; height: 28px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .panel { padding: 26px; }
+            .section-head { margin-top: 70px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
             }
+            .snowflakes, .grain { display: none; }
         }
     </style>
 </head>
 <body>
+    <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="grain" aria-hidden="true"></div>
     <div class="snowflakes" aria-hidden="true"></div>
 
-    <div id="admin-toggle" class="admin-toggle hidden" onclick="toggleAdmin()">
-        <span id="admin-toggle-text">🔒 Mode Admin</span>
-    </div>
+    <button id="admin-toggle" class="admin-toggle hidden" onclick="toggleAdmin()">
+        <span id="admin-toggle-text">🔒 Mode admin</span>
+    </button>
 
     <div class="container">
-        <div class="hero">
-            <h1 class="hero-title">🎄 Ho Ho Ho ! 🎁</h1>
-            
-            <!-- Sélecteur de personne avec tabs -->
-            <div style="text-align: center; margin-bottom: 30px;">
-                <div style="display: inline-flex; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 50px; padding: 5px; border: 2px solid rgba(255, 255, 255, 0.2);">
-                    <button id="tab-gregory" onclick="selectPerson('gregory')" style="padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); color: white; box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);">
-                        👨 Grégory
-                    </button>
-                    <button id="tab-barbara" onclick="selectPerson('barbara')" style="padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: transparent; color: rgba(255, 255, 255, 0.7); margin-left: 5px;">
-                        👩 Barbara
-                    </button>
-                </div>
-            </div>
-            
-            <div class="hero-intro">
-                <h2 id="intro-title">Alors comme ça, tu sais pas quoi offrir à Grégory ? 🤔</h2>
-                <p>
-                    <span class="emoji">🎅</span> T'inquiète, c'est normal ! Trouver LE cadeau parfait, c'est toujours un casse-tête...
+        <header class="hero">
+            <div class="eyebrow fade-up" style="animation-delay: 0.1s">Noël <span id="year"></span></div>
+
+            <h1 class="hero-title">
+                <span class="word" style="animation-delay: 0.2s">Ho</span>
+                <span class="word" style="animation-delay: 0.32s">ho</span>
+                <em class="word" style="animation-delay: 0.44s">ho&nbsp;!</em>
+            </h1>
+
+            <nav class="tabs fade-up" style="animation-delay: 0.7s" aria-label="Choisir une liste">
+                <div class="tab-indicator" id="tab-indicator"></div>
+                <button class="tab active" id="tab-gregory" onclick="selectPerson('gregory')">
+                    <img src="images/gregory.jpg" alt="" onerror="this.remove()"> Grégory
+                </button>
+                <button class="tab" id="tab-barbara" onclick="selectPerson('barbara')">
+                    <img src="images/barbara.jpg" alt="" onerror="this.remove()"> Barbara
+                </button>
+            </nav>
+
+            <div class="intro fade-up" style="animation-delay: 0.9s">
+                <h2 class="swap" id="intro-title">Tu ne sais pas quoi offrir à <em>Grégory</em>&nbsp;?</h2>
+                <p class="swap" id="intro-text">
+                    C'est normal, trouver le cadeau parfait est toujours un casse-tête. Du coup, il a fait une petite liste de choses qui lui feraient plaisir.
                 </p>
                 <p>
-                    <span class="emoji">✨</span> Du coup, <span id="person-pronoun">il a</span> décidé de te faciliter la vie ! Voici quelques idées de trucs qui <span id="person-pronoun2">lui</span> feraient super plaisir pour Noël.
-                </p>
-                <p>
-                    <span class="emoji">🎯</span> Tu peux cliquer sur "Je réserve ce cadeau" pour que les autres sachent que tu t'en occupes. Pas de stress, pas de doublon !
-                </p>
-                <p style="margin-top: 25px; font-weight: 700; font-size: 1.1em; color: #ffe66d;">
-                    Joyeux shopping et merci d'avance ! 🎄❤️
+                    Réserve un cadeau pour que les autres sachent que tu t'en occupes. C'est anonyme, et ça évite les doublons.
                 </p>
             </div>
-        </div>
+        </header>
 
         <!-- Formulaire d'ajout (visible en mode admin uniquement) -->
-        <div id="admin-section" class="card hidden">
-            <h2 style="margin-bottom: 25px; color: #2c5364; font-size: 2em;">✨ Ajouter un souhait</h2>
-            <form id="wishForm">
+        <section id="admin-section" class="panel admin-section hidden">
+            <h2>Ajouter un <em>souhait</em></h2>
+            <form id="wishForm" class="form-grid">
                 <div class="form-group">
                     <label for="person">Pour qui ? *</label>
                     <select id="person" required>
@@ -485,18 +847,27 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="priority">Priorité</label>
+                    <select id="priority">
+                        <option value="low">Basse</option>
+                        <option value="medium" selected>Moyenne</option>
+                        <option value="high">Haute</option>
+                    </select>
+                </div>
+
+                <div class="form-group full">
                     <label for="title">Titre *</label>
-                    <input type="text" id="title" required placeholder="Ex: Livre 'Atomic Habits'">
+                    <input type="text" id="title" required placeholder="Ex : Livre « Atomic Habits »">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group full">
                     <label for="description">Description</label>
-                    <textarea id="description" placeholder="Pourquoi tu aimerais ce cadeau..."></textarea>
+                    <textarea id="description" placeholder="Pourquoi tu aimerais ce cadeau…"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="url">Lien (URL)</label>
-                    <input type="url" id="url" placeholder="https://www.amazon.fr/...">
+                    <label for="url">Lien</label>
+                    <input type="url" id="url" placeholder="https://www.amazon.fr/…">
                 </div>
 
                 <div class="form-group">
@@ -504,31 +875,43 @@
                     <input type="number" id="price" step="0.01" placeholder="29.99">
                 </div>
 
-                <div class="form-group">
-                    <label for="priority">Priorité</label>
-                    <select id="priority">
-                        <option value="low">Basse 💚</option>
-                        <option value="medium" selected>Moyenne 💛</option>
-                        <option value="high">Haute ❤️</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
+                <div class="form-group full">
                     <label for="image_url">Image (URL)</label>
                     <input type="url" id="image_url" placeholder="https://exemple.com/image.jpg">
                 </div>
 
-                <button type="submit">Ajouter à la liste 🎁</button>
+                <div class="form-group full">
+                    <button type="submit" class="btn">Ajouter à la liste</button>
+                </div>
             </form>
-        </div>
+        </section>
 
-        <h2 class="section-title" id="section-title">🎁 Les Cadeaux qui feraient plaisir à <span id="current-person-name">Grégory</span></h2>
+        <div class="section-head">
+            <h2 class="section-title swap" id="section-title">Les envies de <em id="current-person-name">Grégory</em></h2>
+            <div class="counter" id="counter"></div>
+        </div>
 
         <!-- Liste des souhaits -->
-        <div id="wishlist-container">
-            <div class="loading">Chargement de la liste... 🎅</div>
-        </div>
+        <div id="wishlist-container"></div>
+
+        <footer>Fait avec ❤️ et beaucoup de neige</footer>
     </div>
+
+    <!-- Fenêtre de saisie -->
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <form class="modal-card" id="modal-form">
+            <div class="modal-icon" id="modal-icon">🎁</div>
+            <h3 id="modal-title"></h3>
+            <p id="modal-text"></p>
+            <input type="text" id="modal-input" autocomplete="given-name" placeholder="Ton prénom">
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="modal-cancel">Annuler</button>
+                <button type="submit" class="btn" id="modal-ok">Valider</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="toasts" id="toasts"></div>
 
     <script>
         const SUPABASE_URL = 'https://unjeobvydcaiwpomvztn.supabase.co';
@@ -538,101 +921,181 @@
         let isAdmin = false;
         let currentPerson = 'gregory'; // Par défaut on affiche Grégory
 
-        // URLs des images pour les snowflakes
-        const personImages = {
-            gregory: 'https://raw.githubusercontent.com/Rezalowx/christmas-wishlist/main/images/gregory.jpg',
-            barbara: 'https://raw.githubusercontent.com/Rezalowx/christmas-wishlist/main/images/barbara.jpg' 
+        const people = {
+            gregory: { name: 'Grégory', pronoun: 'il', pronoun2: 'lui' },
+            barbara: { name: 'Barbara', pronoun: 'elle', pronoun2: 'lui' }
         };
 
+        // Images utilisées pour la neige (les têtes qui tombent)
+        const personImages = {
+            gregory: 'https://raw.githubusercontent.com/Rezalowx/christmas-wishlist/main/images/gregory.jpg',
+            barbara: 'https://raw.githubusercontent.com/Rezalowx/christmas-wishlist/main/images/barbara.jpg'
+        };
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        document.getElementById('year').textContent = new Date().getFullYear();
+
         // Initialiser Supabase
-        if (SUPABASE_URL !== 'TON_URL_SUPABASE') {
+        if (window.supabase && SUPABASE_URL !== 'TON_URL_SUPABASE') {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
 
-        // Vérifier si le mode admin est activé via l'URL (ex: ?admin=monsecret)
-        const urlParams = new URLSearchParams(window.location.search);
-        const adminKey = urlParams.get('admin');
-        
-        // Change ce mot de passe secret !
+        // Mode admin via l'URL (ex : ?admin=noel2025)
         const SECRET_ADMIN_KEY = 'noel2025';
-        
-        if (adminKey === SECRET_ADMIN_KEY) {
+        if (new URLSearchParams(window.location.search).get('admin') === SECRET_ADMIN_KEY) {
             isAdmin = true;
             document.getElementById('admin-toggle').classList.remove('hidden');
             document.getElementById('admin-section').classList.remove('hidden');
-            document.getElementById('admin-toggle-text').textContent = '🔓 Mode Admin';
+            document.getElementById('admin-toggle-text').textContent = '🔓 Mode admin';
         }
 
-        // Fonction pour changer de personne
+        // Échapper le texte venant de la base pour éviter d'injecter du HTML
+        function esc(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // ---------- Petites notifications ----------
+        function toast(message, type = '') {
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = message;
+            document.getElementById('toasts').appendChild(el);
+            setTimeout(() => el.remove(), 3700);
+        }
+
+        // ---------- Fenêtre de saisie (remplace prompt) ----------
+        function askName({ icon, title, text, okLabel }) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('modal');
+                const form = document.getElementById('modal-form');
+                const input = document.getElementById('modal-input');
+
+                document.getElementById('modal-icon').textContent = icon;
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-text').textContent = text;
+                document.getElementById('modal-ok').textContent = okLabel;
+                input.value = '';
+
+                modal.classList.add('open');
+                setTimeout(() => input.focus(), 50);
+
+                const close = value => {
+                    modal.classList.remove('open');
+                    form.onsubmit = null;
+                    modal.onclick = null;
+                    document.getElementById('modal-cancel').onclick = null;
+                    document.removeEventListener('keydown', onKey);
+                    resolve(value);
+                };
+                const onKey = e => { if (e.key === 'Escape') close(null); };
+
+                form.onsubmit = e => {
+                    e.preventDefault();
+                    const value = input.value.trim();
+                    if (!value) {
+                        form.classList.remove('shake');
+                        void form.offsetWidth;
+                        form.classList.add('shake');
+                        return;
+                    }
+                    close(value);
+                };
+                document.getElementById('modal-cancel').onclick = () => close(null);
+                modal.onclick = e => { if (e.target === modal) close(null); };
+                document.addEventListener('keydown', onKey);
+            });
+        }
+
+        // ---------- Confettis ----------
+        function confetti(x, y) {
+            if (reduceMotion) return;
+            const colors = ['#e9c46a', '#f6f3ec', '#d1495b', '#7fd6bd', '#f3dca0'];
+            for (let i = 0; i < 70; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.background = colors[i % colors.length];
+                c.style.left = x + 'px';
+                c.style.top = y + 'px';
+                document.body.appendChild(c);
+
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = 120 + Math.random() * 260;
+                const dx = Math.cos(angle) * velocity;
+                const dy = Math.sin(angle) * velocity - 180;
+
+                c.animate([
+                    { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+                    { transform: `translate(${dx}px, ${dy + 420}px) rotate(${Math.random() * 720 - 360}deg)`, opacity: 0 }
+                ], { duration: 1400 + Math.random() * 900, easing: 'cubic-bezier(0.2, 0.6, 0.4, 1)' })
+                    .onfinish = () => c.remove();
+            }
+        }
+
+        // ---------- Changement de personne ----------
         function selectPerson(person) {
+            if (person === currentPerson) return;
             currentPerson = person;
-            updateUI();
             updateTabs();
+            swapText(updateUI);
             loadWishlist();
             recreateSnowflakes();
         }
 
-        // Mettre à jour les tabs (actif/inactif)
         function updateTabs() {
-            const tabGregory = document.getElementById('tab-gregory');
-            const tabBarbara = document.getElementById('tab-barbara');
-
-            const activeStyle = 'padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); color: white; box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);';
-            const inactiveStyle = 'padding: 15px 40px; border: none; border-radius: 50px; font-size: 1.1em; font-weight: 700; cursor: pointer; transition: all 0.3s; background: transparent; color: rgba(255, 255, 255, 0.7);';
-
-            if (currentPerson === 'gregory') {
-                tabGregory.style.cssText = activeStyle;
-                tabBarbara.style.cssText = inactiveStyle + ' margin-left: 5px;';
-            } else {
-                tabBarbara.style.cssText = activeStyle;
-                tabGregory.style.cssText = inactiveStyle + ' margin-right: 5px;';
-            }
+            ['gregory', 'barbara'].forEach(p =>
+                document.getElementById(`tab-${p}`).classList.toggle('active', p === currentPerson));
+            moveIndicator();
         }
 
-        // Mettre à jour l'interface selon la personne
+        function moveIndicator() {
+            const active = document.getElementById(`tab-${currentPerson}`);
+            const indicator = document.getElementById('tab-indicator');
+            indicator.style.width = active.offsetWidth + 'px';
+            indicator.style.transform = `translateX(${active.offsetLeft - 6}px)`;
+        }
+
+        // Fondu des textes quand on change de personne
+        function swapText(update) {
+            const els = document.querySelectorAll('.swap');
+            els.forEach(el => el.classList.add('out'));
+            setTimeout(() => {
+                update();
+                els.forEach(el => el.classList.remove('out'));
+            }, 300);
+        }
+
         function updateUI() {
-            const isGregory = currentPerson === 'gregory';
-            const personName = isGregory ? 'Grégory' : 'Barbara';
-            const pronoun = isGregory ? 'il a' : 'elle a';
-            const pronoun2 = isGregory ? 'lui' : 'elle';
-
-            document.getElementById('intro-title').textContent = `Alors comme ça, tu sais pas quoi offrir à ${personName} ? 🤔`;
-            document.getElementById('person-pronoun').textContent = pronoun;
-            document.getElementById('person-pronoun2').textContent = pronoun2;
-            document.getElementById('current-person-name').textContent = personName;
+            const p = people[currentPerson];
+            document.getElementById('intro-title').innerHTML = `Tu ne sais pas quoi offrir à <em>${p.name}</em>&nbsp;?`;
+            document.getElementById('intro-text').textContent =
+                `C'est normal, trouver le cadeau parfait est toujours un casse-tête. Du coup, ${p.pronoun} a fait une petite liste de choses qui ${p.pronoun2} feraient plaisir.`;
+            document.getElementById('current-person-name').textContent = p.name;
         }
 
-        // Toggle mode admin
         function toggleAdmin() {
             isAdmin = !isAdmin;
-            const adminSection = document.getElementById('admin-section');
-            const adminToggleText = document.getElementById('admin-toggle-text');
-            
-            if (isAdmin) {
-                adminSection.classList.remove('hidden');
-                adminToggleText.textContent = '🔓 Mode Admin';
-            } else {
-                adminSection.classList.add('hidden');
-                adminToggleText.textContent = '🔒 Mode Admin';
-            }
-            
+            document.getElementById('admin-section').classList.toggle('hidden', !isAdmin);
+            document.getElementById('admin-toggle-text').textContent = isAdmin ? '🔓 Mode admin' : '🔒 Mode admin';
             loadWishlist();
         }
 
-        // Charger la liste
+        // ---------- Liste ----------
         async function loadWishlist() {
             const container = document.getElementById('wishlist-container');
-            
+            const counter = document.getElementById('counter');
+            counter.textContent = '';
+
             if (!supabase) {
                 container.innerHTML = `
-                    <div class="card">
-                        <h2 style="color: #ff6b6b;">⚙️ Configuration requise</h2>
-                        <p>Veuillez configurer Supabase dans le fichier index.html</p>
-                        <p style="margin-top: 15px;">Instructions dans le fichier SETUP.md</p>
-                    </div>
-                `;
+                    <div class="panel center">
+                        <h2>Configuration requise</h2>
+                        <p>Impossible de se connecter à Supabase.</p>
+                    </div>`;
                 return;
             }
+
+            container.innerHTML = `<div class="wishlist-grid">${'<div class="skeleton"></div>'.repeat(3)}</div>`;
 
             try {
                 const { data, error } = await supabase
@@ -644,81 +1107,108 @@
                 if (error) throw error;
 
                 if (data.length === 0) {
-                    const personName = currentPerson === 'gregory' ? 'Grégory' : 'Barbara';
                     container.innerHTML = `
-                        <div class="card" style="text-align: center;">
-                            <h2>🎅 Liste vide pour ${personName} pour l'instant</h2>
-                            <p style="margin-top: 15px; color: #666;">Activez le mode admin pour ajouter des souhaits !</p>
-                        </div>
-                    `;
+                        <div class="panel center">
+                            <h2>La liste de ${people[currentPerson].name} est vide pour l'instant</h2>
+                            <p>Reviens un peu plus tard, le Père Noël prend des notes. 🎅</p>
+                        </div>`;
                     return;
                 }
 
-                container.innerHTML = `<div class="wishlist-grid">${data.map(item => createWishCard(item)).join('')}</div>`;
+                const free = data.filter(item => !item.reserved_by).length;
+                counter.innerHTML = `<strong>${free}</strong> cadeau${free > 1 ? 'x' : ''} encore disponible${free > 1 ? 's' : ''} sur ${data.length}`;
+
+                container.innerHTML = `<div class="wishlist-grid">${data.map(createWishCard).join('')}</div>`;
+                animateCards();
             } catch (error) {
                 console.error('Erreur:', error);
                 container.innerHTML = `
-                    <div class="card">
-                        <h2 style="color: #ff6b6b;">Erreur de chargement</h2>
-                        <p>${error.message}</p>
-                    </div>
-                `;
+                    <div class="panel center">
+                        <h2>Oups, erreur de chargement</h2>
+                        <p>${esc(error.message)}</p>
+                    </div>`;
             }
         }
 
-        // Créer une carte de souhait
         function createWishCard(item) {
-            const priorityClass = `priority-${item.priority}`;
-            const priorityEmoji = {
-                high: '🔥',
-                medium: '⭐',
-                low: '💚'
-            }[item.priority];
+            const priority = {
+                high: 'Très envie',
+                medium: 'Envie',
+                low: 'Si tu veux'
+            }[item.priority] || 'Envie';
 
-            const priorityText = {
-                high: 'Priorité haute',
-                medium: 'Priorité moyenne',
-                low: 'Priorité basse'
-            }[item.priority];
+            const reserved = !!item.reserved_by;
+            const price = item.price ? `${Number(item.price).toLocaleString('fr-FR')} €` : '';
 
             return `
-                <div class="wish-item ${item.reserved_by ? 'reserved' : ''}">
-                    ${isAdmin ? `<button class="delete-btn" onclick="deleteWish('${item.id}')">×</button>` : ''}
-                    
-                    <div class="wish-item-image-container">
-                        ${item.image_url 
-                            ? `<img src="${item.image_url}" alt="${item.title}">` 
-                            : `<div class="placeholder-image">🎁</div>`
-                        }
+                <article class="wish-item ${reserved ? 'reserved' : ''}">
+                    <div class="wish-media">
+                        <span class="priority priority-${esc(item.priority)}"><i></i><span>${priority}</span></span>
+                        ${isAdmin ? `<button class="delete-btn" title="Supprimer" onclick="deleteWish('${esc(item.id)}')">×</button>` : ''}
+                        ${item.image_url
+                            ? `<img src="${esc(item.image_url)}" alt="${esc(item.title)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;placeholder&quot;>🎁</div>'">`
+                            : `<div class="placeholder">🎁</div>`}
                     </div>
-                    
-                    <div class="wish-item-content">
-                        <div class="wish-title">${item.title}</div>
-                        
-                        <span class="priority ${priorityClass}">${priorityEmoji} ${priorityText}</span>
-                        
-                        ${item.description ? `<div class="wish-description">${item.description}</div>` : ''}
-                        
-                        ${item.price ? `<div class="wish-price">${item.price} €</div>` : ''}
-                        
-                        ${item.url ? `<a href="${item.url}" target="_blank" class="link-btn">🔗 Voir le produit →</a>` : ''}
-                        
-                        ${item.reserved_by 
-                            ? `<div class="reserved-label">✅ Déjà réservé</div>
-                               <button class="cancel-reservation-btn" onclick="cancelReservation('${item.id}')">Annuler ma réservation</button>`
-                            : `<button class="reserve-btn" onclick="reserveItem('${item.id}')">Je réserve ce cadeau ! 🎁</button>`
-                        }
+
+                    <div class="wish-body">
+                        <h3 class="wish-title">${esc(item.title)}</h3>
+                        ${item.description ? `<p class="wish-description">${esc(item.description)}</p>` : ''}
+
+                        <div class="wish-meta">
+                            <span class="wish-price">${price}</span>
+                            ${item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener" class="link-btn">Voir le produit <span>→</span></a>` : ''}
+                        </div>
+
+                        ${reserved
+                            ? `<div class="reserved-row">
+                                   <span class="reserved-label">✓ Déjà réservé</span>
+                                   <button class="cancel-reservation-btn" onclick="cancelReservation('${esc(item.id)}')">Annuler</button>
+                               </div>`
+                            : `<button class="btn reserve-btn" onclick="reserveItem('${esc(item.id)}', event)">Je réserve ce cadeau 🎁</button>`}
                     </div>
-                </div>
-            `;
+                </article>`;
         }
 
-        // Ajouter un souhait
+        // Apparition en cascade + halo et inclinaison qui suivent la souris
+        function animateCards() {
+            const cards = document.querySelectorAll('.wish-item');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12 });
+
+            cards.forEach((card, i) => {
+                card.style.setProperty('--delay', `${(i % 3) * 0.12}s`);
+                observer.observe(card);
+
+                if (reduceMotion || !window.matchMedia('(hover: hover)').matches) return;
+
+                card.addEventListener('mousemove', e => {
+                    const r = card.getBoundingClientRect();
+                    const x = (e.clientX - r.left) / r.width;
+                    const y = (e.clientY - r.top) / r.height;
+                    card.style.setProperty('--mx', `${x * 100}%`);
+                    card.style.setProperty('--my', `${y * 100}%`);
+                    card.style.setProperty('--ry', `${(x - 0.5) * 6}deg`);
+                    card.style.setProperty('--rx', `${(0.5 - y) * 6}deg`);
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.setProperty('--rx', '0deg');
+                    card.style.setProperty('--ry', '0deg');
+                });
+            });
+        }
+
+        // ---------- Ajouter un souhait ----------
         document.getElementById('wishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             if (!supabase) {
-                alert('Veuillez configurer Supabase d\'abord');
+                toast("Supabase n'est pas configuré", 'error');
                 return;
             }
 
@@ -739,17 +1229,23 @@
 
                 if (error) throw error;
 
-                alert('✨ Souhait ajouté !');
+                toast('✨ Souhait ajouté !');
                 e.target.reset();
                 loadWishlist();
             } catch (error) {
-                alert('Erreur: ' + error.message);
+                toast('Erreur : ' + error.message, 'error');
             }
         });
 
-        // Réserver un item
-        async function reserveItem(id) {
-            const name = prompt("Ton prénom pour réserver ce cadeau (il ne sera affiché à personne, il sert seulement si tu veux annuler plus tard) :");
+        // ---------- Réserver ----------
+        async function reserveItem(id, event) {
+            const origin = event ? { x: event.clientX, y: event.clientY } : null;
+            const name = await askName({
+                icon: '🎁',
+                title: 'Réserver ce cadeau',
+                text: "Indique ton prénom. Il ne sera affiché à personne, il sert seulement si tu veux annuler plus tard.",
+                okLabel: 'Je réserve'
+            });
             if (!name) return;
 
             try {
@@ -760,16 +1256,22 @@
 
                 if (error) throw error;
 
-                alert('🎁 Cadeau réservé ! Merci !');
+                if (origin) confetti(origin.x, origin.y);
+                toast('🎁 Cadeau réservé, merci !');
                 loadWishlist();
             } catch (error) {
-                alert('Erreur: ' + error.message);
+                toast('Erreur : ' + error.message, 'error');
             }
         }
 
-        // Annuler une réservation (ouvert à tous, on redemande le prénom pour éviter les erreurs)
+        // ---------- Annuler une réservation (on redemande le prénom pour éviter les erreurs) ----------
         async function cancelReservation(id) {
-            const name = prompt('Pour annuler, tape le prénom utilisé pour la réservation :');
+            const name = await askName({
+                icon: '↩️',
+                title: 'Annuler la réservation',
+                text: 'Tape le prénom utilisé au moment de réserver.',
+                okLabel: 'Annuler la résa'
+            });
             if (!name) return;
 
             try {
@@ -783,7 +1285,7 @@
 
                 const normalize = s => (s || '').trim().toLowerCase();
                 if (normalize(data.reserved_by) !== normalize(name)) {
-                    alert("Ce prénom ne correspond pas à la réservation. Rien n'a été annulé.");
+                    toast("Ce prénom ne correspond pas, rien n'a été annulé.", 'error');
                     return;
                 }
 
@@ -794,14 +1296,14 @@
 
                 if (error) throw error;
 
-                alert('Réservation annulée, le cadeau est de nouveau disponible.');
+                toast('Réservation annulée, le cadeau est de nouveau disponible.');
                 loadWishlist();
             } catch (error) {
-                alert('Erreur: ' + error.message);
+                toast('Erreur : ' + error.message, 'error');
             }
         }
 
-        // Supprimer un souhait (admin uniquement)
+        // ---------- Supprimer (admin uniquement) ----------
         async function deleteWish(id) {
             if (!confirm('Supprimer ce souhait ?')) return;
 
@@ -813,58 +1315,80 @@
 
                 if (error) throw error;
 
+                toast('Souhait supprimé');
                 loadWishlist();
             } catch (error) {
-                alert('Erreur: ' + error.message);
+                toast('Erreur : ' + error.message, 'error');
             }
         }
 
-        // Charger au démarrage
-        updateUI();
-        updateTabs();
-        loadWishlist();
-
-        // Effet de neige (ou de têtes qui tombent !)
+        // ---------- Neige : les têtes qui tombent ----------
         function createSnowflakes() {
-            const snowflakesContainer = document.querySelector('.snowflakes');
-            const snowflakeCount = 50;
-
-            // Image selon la personne courante
+            if (reduceMotion) return;
+            const container = document.querySelector('.snowflakes');
             const imageURL = personImages[currentPerson];
+            const count = window.innerWidth < 640 ? 22 : 40;
 
-            for (let i = 0; i < snowflakeCount; i++) {
-                const snowflake = document.createElement('div');
-                snowflake.classList.add('snowflake');
-                
-                // Si une image est définie, on l'utilise, sinon on garde les flocons
+            for (let i = 0; i < count; i++) {
+                // Trois plans de profondeur : loin (petit, flou, lent), milieu, près (grand, net, rapide)
+                const depth = Math.random();
+                const layer = depth < 0.45 ? 'far' : depth < 0.85 ? 'mid' : 'near';
+                const size = { far: 14 + Math.random() * 10, mid: 26 + Math.random() * 12, near: 44 + Math.random() * 16 }[layer];
+                const duration = { far: 16, mid: 11, near: 7 }[layer] + Math.random() * 5;
+
+                const flake = document.createElement('div');
+                flake.className = `snowflake ${layer}`;
+                flake.style.left = Math.random() * 100 + '%';
+                flake.style.animationDuration = duration + 's';
+                flake.style.animationDelay = -Math.random() * duration + 's';
+
+                const sway = document.createElement('div');
+                sway.className = 'sway';
+                sway.style.animationDuration = 2.5 + Math.random() * 3 + 's';
+
                 if (imageURL) {
                     const img = document.createElement('img');
                     img.src = imageURL;
-                    img.style.width = (Math.random() * 30 + 20) + 'px'; // Taille entre 20 et 50px
-                    img.style.height = 'auto';
-                    img.style.borderRadius = '50%'; // Forme ronde
-                    snowflake.appendChild(img);
+                    img.alt = '';
+                    img.style.width = size + 'px';
+                    img.style.animationDuration = 6 + Math.random() * 10 + 's';
+                    img.style.animationDirection = Math.random() > 0.5 ? 'normal' : 'reverse';
+                    img.onerror = () => { img.replaceWith(makeFlake(size)); };
+                    sway.appendChild(img);
                 } else {
-                    snowflake.innerHTML = '❄';
-                    snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
+                    sway.appendChild(makeFlake(size));
                 }
-                
-                snowflake.style.left = Math.random() * 100 + '%';
-                snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
-                snowflake.style.animationDelay = Math.random() * 5 + 's';
-                snowflake.style.opacity = Math.random() * 0.5 + 0.3;
-                snowflakesContainer.appendChild(snowflake);
+
+                flake.appendChild(sway);
+                container.appendChild(flake);
             }
         }
 
-        // Fonction pour recréer les snowflakes avec la nouvelle image
-        function recreateSnowflakes() {
-            const snowflakesContainer = document.querySelector('.snowflakes');
-            snowflakesContainer.innerHTML = ''; // Vider
-            createSnowflakes(); // Recréer avec la nouvelle personne
+        function makeFlake(size) {
+            const f = document.createElement('span');
+            f.className = 'flake';
+            f.textContent = '❄';
+            f.style.fontSize = size * 0.6 + 'px';
+            return f;
         }
 
+        // Recréer la neige avec la tête de la nouvelle personne
+        function recreateSnowflakes() {
+            const container = document.querySelector('.snowflakes');
+            container.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).onfinish = () => {
+                container.innerHTML = '';
+                createSnowflakes();
+                container.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, fill: 'forwards' });
+            };
+        }
+
+        // ---------- Démarrage ----------
+        updateUI();
+        updateTabs();
+        loadWishlist();
         createSnowflakes();
+        window.addEventListener('resize', moveIndicator);
+        document.fonts && document.fonts.ready.then(moveIndicator);
     </script>
 </body>
 </html>
