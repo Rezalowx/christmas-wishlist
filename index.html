@@ -733,6 +733,14 @@
             transition: transform 0.3s var(--ease), background 0.3s;
         }
 
+        .form-buttons { display: flex; gap: 12px; }
+
+        .admin-section.editing {
+            border-color: rgba(233, 196, 106, 0.6);
+            box-shadow: 0 0 0 4px rgba(233, 196, 106, 0.12);
+            transition: box-shadow 0.4s, border-color 0.4s;
+        }
+
         .photo-btn:hover { background: rgba(233, 196, 106, 0.6); transform: scale(1.1); }
 
         @media (max-width: 640px) {
@@ -891,7 +899,7 @@
 
         <!-- Formulaire d'ajout (visible en mode admin uniquement) -->
         <section id="admin-section" class="panel admin-section hidden">
-            <h2>Ajouter un <em>souhait</em></h2>
+            <h2 id="form-title">Ajouter un <em>souhait</em></h2>
             <form id="wishForm" class="form-grid">
                 <div class="form-group">
                     <label for="person">Pour qui ? *</label>
@@ -948,11 +956,11 @@
                     <input type="number" id="price" step="0.01" inputmode="decimal" placeholder="29.99">
                 </div>
 
-                <div class="form-group full">
-                    <button type="submit" class="btn">Ajouter à la liste</button>
+                <div class="form-group full form-buttons">
+                    <button type="button" class="btn btn-ghost hidden" id="cancel-edit" onclick="resetForm()">Annuler</button>
+                    <button type="submit" class="btn" id="form-submit">Ajouter à la liste</button>
                 </div>
             </form>
-            <input type="file" id="card-image-file" accept="image/*" hidden>
         </section>
 
         <div class="section-head">
@@ -989,6 +997,8 @@
         let db; // client Supabase (pas « supabase », déjà pris par la bibliothèque)
         let isAdmin = false;
         let currentPerson = 'gregory'; // Par défaut on affiche Grégory
+        let loadedItems = {};          // cadeaux affichés, par id (pour la modification)
+        let editingId = null;          // id du cadeau en cours de modification
 
         const people = {
             gregory: { name: 'Grégory', pronoun: 'il', pronoun2: 'lui' },
@@ -1187,6 +1197,7 @@
                 const free = data.filter(item => !item.reserved_by).length;
                 counter.innerHTML = `<strong>${free}</strong> cadeau${free > 1 ? 'x' : ''} encore disponible${free > 1 ? 's' : ''} sur ${data.length}`;
 
+                loadedItems = Object.fromEntries(data.map(item => [String(item.id), item]));
                 container.innerHTML = `<div class="wishlist-grid">${data.map(createWishCard).join('')}</div>`;
                 animateCards();
             } catch (error) {
@@ -1213,7 +1224,7 @@
                 <article class="wish-item ${reserved ? 'reserved' : ''}">
                     <div class="wish-media">
                         <span class="priority priority-${esc(item.priority)}"><i></i><span>${priority}</span></span>
-                        ${isAdmin ? `<button class="photo-btn" title="Changer l'image" onclick="changeCardImage('${esc(item.id)}')">📷</button>
+                        ${isAdmin ? `<button class="photo-btn" title="Modifier" onclick="editWish('${esc(item.id)}')">✏️</button>
                                     <button class="delete-btn" title="Supprimer" onclick="deleteWish('${esc(item.id)}')">×</button>` : ''}
                         ${item.image_url
                             ? `<img src="${esc(item.image_url)}" alt="${esc(item.title)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;placeholder&quot;>🎁</div>'">`
@@ -1273,7 +1284,43 @@
             });
         }
 
-        // ---------- Ajouter un souhait ----------
+        // ---------- Modifier un souhait (mode admin) ----------
+        function editWish(id) {
+            const item = loadedItems[String(id)];
+            if (!item) return;
+            editingId = item.id;
+
+            document.getElementById('person').value = item.person;
+            document.getElementById('priority').value = item.priority || 'medium';
+            document.getElementById('url').value = item.url || '';
+            document.getElementById('title').value = item.title || '';
+            document.getElementById('description').value = item.description || '';
+            document.getElementById('price').value = item.price ?? '';
+            document.getElementById('image_url').value = '';
+            lastFetchedLink = item.url || ''; // ne pas re-chercher l'image tant que le lien ne change pas
+            setImage(item.image_url || null, item.image_url ? 'Image actuelle. Choisis une photo ou change le lien pour la remplacer.' : '');
+            imageFromPhoto = false;
+
+            document.getElementById('form-title').innerHTML = 'Modifier le <em>souhait</em>';
+            document.getElementById('form-submit').textContent = 'Enregistrer les modifications';
+            document.getElementById('cancel-edit').classList.remove('hidden');
+            const section = document.getElementById('admin-section');
+            section.classList.add('editing');
+            section.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+        }
+
+        function resetForm() {
+            editingId = null;
+            document.getElementById('wishForm').reset();
+            lastFetchedLink = '';
+            setImage(null);
+            document.getElementById('form-title').innerHTML = 'Ajouter un <em>souhait</em>';
+            document.getElementById('form-submit').textContent = 'Ajouter à la liste';
+            document.getElementById('cancel-edit').classList.add('hidden');
+            document.getElementById('admin-section').classList.remove('editing');
+        }
+
+        // ---------- Ajouter / enregistrer un souhait ----------
         document.getElementById('wishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -1293,16 +1340,19 @@
             };
 
             try {
-                const { error } = await db
-                    .from('wishlist_items')
-                    .insert([formData]);
+                const query = db.from('wishlist_items');
+                const { error } = editingId
+                    ? await query.update(formData).eq('id', editingId) // la réservation n'est pas touchée
+                    : await query.insert([formData]);
 
                 if (error) throw error;
 
-                toast('✨ Souhait ajouté !');
-                e.target.reset();
-                setImage(null);
-                loadWishlist();
+                const wasEditing = !!editingId;
+                const person = formData.person;
+                toast(wasEditing ? '✓ Modifications enregistrées' : '✨ Souhait ajouté !');
+                resetForm();
+                if (person !== currentPerson) selectPerson(person); else loadWishlist();
+                if (wasEditing) document.querySelector('.section-head').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
             } catch (error) {
                 toast('Erreur : ' + error.message, 'error');
             }
@@ -1400,31 +1450,6 @@
             imageFromPhoto = !!src;
             setImage(src || null, src ? '✓ Image ajoutée.' : '');
             imageFromPhoto = !!src;
-        });
-
-        // Changer l'image d'un cadeau déjà dans la liste (mode admin)
-        let cardImageTarget = null;
-        function changeCardImage(id) {
-            cardImageTarget = id;
-            document.getElementById('card-image-file').click();
-        }
-
-        document.getElementById('card-image-file').addEventListener('change', async e => {
-            const file = e.target.files[0];
-            e.target.value = '';
-            if (!file || !cardImageTarget) return;
-            try {
-                const image = await resizeImage(file);
-                const { error } = await db
-                    .from('wishlist_items')
-                    .update({ image_url: image })
-                    .eq('id', cardImageTarget);
-                if (error) throw error;
-                toast('📷 Image mise à jour');
-                loadWishlist();
-            } catch (error) {
-                toast('Erreur : ' + error.message, 'error');
-            }
         });
 
         // ---------- Réserver ----------
